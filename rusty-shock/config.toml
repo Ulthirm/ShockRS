@@ -15,14 +15,14 @@
     # Default: /avatar/parameters/
     touchpointPrefix = "/avatar/parameters/"
 
-    [OpenShock-Legacy]
+    [openshock_legacy]
     # OpenShock Legacy's endpoint to issue commands to.
     # Default: OpenShock.Local
-    api_endpoint = "OpenShock.Local"
+    api_endpoint = "openshock.local"
 
     [logging]
     # This is the log level that RustyShock will use.
     # Default: Info
     # options: Off, Info, Debug, Error
-    level = "kaka"
+    level = "Debug"
     

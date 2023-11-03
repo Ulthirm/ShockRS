@@ -6,6 +6,10 @@ mod config;
 mod osc;
 //load openshock-legacy global module
 mod openshock_legacy;
+//load openshock global module
+mod openshock;
+//load pishock global module
+mod pishock;
 
 //using CONFIG.osc.listen_port
 #[tokio::main]
@@ -27,6 +31,3 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/*
-
-*/

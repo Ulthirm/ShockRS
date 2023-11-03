@@ -10,6 +10,7 @@ use log::LevelFilter;
 pub struct Config {
     pub osc: Osc,
     pub logging: Logging,
+    pub openshock_legacy: OpenShockLegacy,
 }
 
 // Expected OSC config, listen_port,send_port,ip_address
@@ -23,6 +24,11 @@ pub struct Osc {
 #[derive(Deserialize)]
 pub struct Logging {
     pub level: String,
+}
+
+#[derive(Deserialize)]
+pub struct OpenShockLegacy {
+    pub api_endpoint: String,
 }
 
 // Make CONFIG a public static so it's accessible from other modules
@@ -64,7 +70,7 @@ fn create_config() -> io::Result<()> {
     # Default: 127.0.0.1 (LocalHost)
     ip_address = "127.0.0.1"
     
-    [OpenShock-Legacy]
+    [openshock_legacy]
     # OpenShock Legacy's endpoint to issue commands to.
     # Default: OpenShock.Local
     api_endpoint = "OpenShock.Local"

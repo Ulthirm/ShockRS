@@ -4,19 +4,21 @@ use std::fs;
 use std::fmt;
 use once_cell::sync::Lazy;
 
+use crate::{openshock_legacy,openshock,pishock};
+
 #[derive(Deserialize)]
 pub struct Touchpoints {
-    touchpoints: Vec<Device>,
+    pub touchpoints: Vec<Device>,
 }
 
 #[derive(Deserialize)]
 pub struct Device {
-    address: String,
-    firmware: String,
-    method: u8,
-    intensity: f32,
-    duration: u32,
-    ids: Vec<u32>,
+    pub address: String,
+    pub firmware: String,
+    pub method: u8,
+    pub intensity: f32,
+    pub duration: u32,
+    pub ids: Vec<u32>,
 }
 
 pub static TOUCHPOINTS: Lazy<Touchpoints> = Lazy::new(|| {
@@ -27,6 +29,9 @@ pub static TOUCHPOINTS: Lazy<Touchpoints> = Lazy::new(|| {
         .expect("Failed to parse touchpoints")
 });
 
+pub fn get_config() -> &'static Touchpoints {
+    &TOUCHPOINTS
+}
 
 pub async fn display_touchpoints() -> Result<(), Box<dyn std::error::Error>> {
     for device in TOUCHPOINTS.touchpoints.iter() {
@@ -41,6 +46,21 @@ pub async fn touchpoint_router(touchpoint: String, touchpoint_args: Vec<OscType>
 
     if let Some(device) = TOUCHPOINTS.touchpoints.iter().find(|device| device.address == touchpoint) {
         log::debug!("Touchpoint Firmware: {}", device.firmware);
+        match device.firmware.to_ascii_lowercase().as_str() {
+            "legacy" => {
+                log::debug!("Legacy Touchpoint");
+                openshock_legacy::handler::handler(device,touchpoint,touchpoint_args.clone()).await;
+            },
+            "openshock" => {
+                log::debug!("OpenShock Touchpoint");
+                openshock::handler::handler(touchpoint,touchpoint_args.clone()).await;
+            },
+            "pishock" => {
+                log::debug!("PiShock Touchpoint");
+                pishock::handler::handler(touchpoint,touchpoint_args.clone()).await;
+            }
+            _ => log::error!("Unknown touchpoint firmware: {}", device.firmware),
+        }
     } else {
         log::error!("Unknown touchpoint: {}", touchpoint);
     }
