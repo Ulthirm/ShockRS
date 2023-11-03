@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use serde::Deserialize;
-use std::{fs,io,io::Write,fs::File,str::FromStr};
-use swing::{Logger,Config as LoggerConfig};
+use std::{fs,io,io::Write,str::FromStr};
+use swing::Config as LoggerConfig;
 use log::LevelFilter;
 
 
@@ -71,8 +71,8 @@ fn create_config() -> io::Result<()> {
 
     [logging]
     # This is the log level that RustyShock will use.
-    # Default: info
-    level = "info"
+    # Default: Info
+    level = "Info"
     "#;
 
     //for some odd reason if I dont do the conversion to bytes it wont write to the file even with as_bytes in write_all
@@ -88,7 +88,7 @@ pub fn get_logging_config() -> LoggerConfig {
     let log_level_str = &CONFIG.logging.level;
     
     // Parse the log level from string, defaulting to 'Debug' if there's an error
-    let level = LevelFilter::from_str(log_level_str).unwrap_or_else(|err|{ 
+    let level = LevelFilter::from_str(log_level_str).unwrap_or_else(|_|{ 
         println!("Unable to parse log level from config: {}. Defaulting to 'Debug'", log_level_str);
         LevelFilter::Debug
     });

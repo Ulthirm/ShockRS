@@ -10,7 +10,11 @@
     # This is the IP Address of the computer with the OSC Client on it (EX: VRChat) 
     # Default: 127.0.0.1 (LocalHost)
     ip_address = "127.0.0.1"
-    
+
+    # This is the Prefix expected from OSC for Shocker touchpoints
+    # Default: /avatar/parameters/
+    touchpointPrefix = "/avatar/parameters/"
+
     [OpenShock-Legacy]
     # OpenShock Legacy's endpoint to issue commands to.
     # Default: OpenShock.Local

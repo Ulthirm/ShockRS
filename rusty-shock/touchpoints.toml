@@ -1,0 +1,33 @@
+# Example: 
+# [[touchpoints]]
+# address = "tail"          # address is the OSC Touchpoint address defined on your avatar
+# firmware = "legacy"       # firmware is the firmware of your controller device: legacy, openshock, pishock
+# method = 1                # method is the permitted method to use the Shockers, 0 is disabled, 1 is shock+vibe, 2 is vibrate only
+# intensity = 0.1           # Maximum intensity that can be sent
+# duration = 300            # maximum duration that can be sent
+# ids = [1234, 5678, 9098 , 7654] # IDs of your shockers in the firmware
+
+
+[[touchpoints]]
+address = "tail"
+firmware = "legacy"
+method = 1
+intensity = 0.1
+duration = 300
+ids = [3863, 4032,6060,6061]
+
+[[touchpoints]]
+address = "NoseBoop"
+firmware = "openshock"
+method = 1
+intensity = 0.1
+duration = 300
+ids = [3863, 4032,6060,6061]
+
+[[touchpoints]]
+address = "HeadPat"
+firmware = "pishock"
+method = 1
+intensity = 0.1
+duration = 300
+ids = [3863, 4032,6060,6061]

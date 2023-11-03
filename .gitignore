@@ -11,3 +11,5 @@ Cargo.lock
 **/*.rs.bk
 
 rusty-shock/config1.toml
+
+.vscode/settings.json
