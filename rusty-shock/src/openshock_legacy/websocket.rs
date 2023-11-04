@@ -1,8 +1,9 @@
 use async_tungstenite::tokio::{connect_async, TokioAdapter};
 use async_tungstenite::{WebSocketStream, stream::Stream as WebSocketStreamGeneric,tungstenite::protocol::WebSocket, tungstenite::{Message,Error as WsError}};
 use futures_util::{SinkExt, StreamExt};
-use tokio::{time::{Duration, self}, sync::Mutex};
+use tokio::{time::{Duration, self}, sync::{Mutex,OnceCell}};
 use std::sync::Arc;
+use once_cell::sync::Lazy;
 
 type GenericWebSocketStream = WebSocketStreamGeneric<TokioAdapter<tokio::net::TcpStream>, TokioAdapter<tokio_native_tls::TlsStream<tokio::net::TcpStream>>>;
 
@@ -11,30 +12,34 @@ pub struct WebSocketClient {
     pub url: Mutex<String>,
 }
 
+// Lazy here is used to defer the creation of the client until it's actually needed.
+static WEBSOCKET_CLIENT: Lazy<Mutex<Option<Arc<WebSocketClient>>>> = Lazy::new(|| Mutex::new(None));
+
 impl WebSocketClient {
-    // Method to create a new WebSocket connection if necessary and store the URL
-    pub async fn create_new(url: &str, ws_client: Arc<WebSocketClient>) -> Result<Arc<WebSocketClient>, WsError> {
-        {
-            // Lock the ws_stream to check the current WebSocket connection
-            let ws_stream_guard = ws_client.ws_stream.lock().await;
-            if ws_stream_guard.is_none() {
-                // Drop the guard before establishing a new connection
-                drop(ws_stream_guard);
+    // This should only take a URL and create a new WebSocketClient
+    pub async fn create_new(url: &str) -> Result<WebSocketClient, WsError> {
+        let (ws_stream, _) = connect_async(url).await?;
+        
+        Ok(WebSocketClient {
+            ws_stream: Mutex::new(Some(ws_stream)),
+            url: Mutex::new(url.to_owned()),
+        })
+    }
 
-                // There is no active WebSocket connection, so create one
-                let (ws_stream, _) = connect_async(url).await?;
-                let mut ws_stream_guard = ws_client.ws_stream.lock().await;
-                *ws_stream_guard = Some(ws_stream);
+    // This should be an associated function, not an instance method.
+    // TODO: ERROR HANDLING
+    pub async fn get_or_init_websocket_client(url: &str) -> Result<Arc<WebSocketClient>, WsError> {
+        let mut ws_client_guard = WEBSOCKET_CLIENT.lock().await;
 
-                // Store the URL
-                let mut url_guard = ws_client.url.lock().await;
-                *url_guard = url.to_owned();
+        match &*ws_client_guard {
+            Some(client) => Ok(client.clone()),
+            None => {
+                let client = WebSocketClient::create_new(url).await?;
+                let client_arc = Arc::new(client);
+                *ws_client_guard = Some(client_arc.clone());
+                Ok(client_arc)
             }
-            // If there's already a WebSocket, we do nothing
         }
-
-        // Whether we created a new connection or not, we return the client
-        Ok(ws_client.clone())
     }
 
     // Method to reconnect using the stored URL
