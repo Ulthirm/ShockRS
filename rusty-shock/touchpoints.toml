@@ -12,7 +12,7 @@
 address = "tail"
 firmware = "legacy"
 method = 1
-intensity = 0.1
+intensity = 1.0
 duration = 300
 ids = [3863, 4032,6060,6061]
 
