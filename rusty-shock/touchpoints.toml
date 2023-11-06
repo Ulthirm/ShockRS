@@ -11,7 +11,7 @@
 [[touchpoints]]
 address = "tail"
 firmware = "legacy"
-method = 2
+method = 1
 intensity = 1.0
 duration = 300
 ids = [3863]

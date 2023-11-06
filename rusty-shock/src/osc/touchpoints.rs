@@ -3,8 +3,10 @@ use serde::Deserialize;
 use std::fs;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
+use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
-use tokio::time::{Duration,self};
+use tokio::time::{Duration,self,Instant};
+use tokio::sync::Mutex;
 
 use crate::{openshock_legacy,openshock,pishock};
 
@@ -23,6 +25,15 @@ pub struct Device {
     pub ids: Vec<u32>,
 }
 
+#[derive(Debug, Clone)]
+pub struct CommandState {
+    pub id: u32,
+    pub duration: u32,
+    pub intensity: f32,
+    pub last_issued: Instant,
+    pub expiry: Instant,
+}
+
 pub static TOUCHPOINTS: Lazy<Touchpoints> = Lazy::new(|| {
     let touchpoints_path = "touchpoints.toml";
     let touchpoints_str = fs::read_to_string(touchpoints_path)
@@ -33,6 +44,23 @@ pub static TOUCHPOINTS: Lazy<Touchpoints> = Lazy::new(|| {
 
 pub fn get_config() -> &'static Touchpoints {
     &TOUCHPOINTS
+}
+
+pub async fn initialize_commandmap() -> Arc<Mutex<HashMap<u32, CommandState>>> {
+    let command_states: Arc<Mutex<HashMap<u32, CommandState>>> = Arc::new(Mutex::new(HashMap::new()));
+    for device in TOUCHPOINTS.touchpoints.iter() {
+        for &id in &device.ids {
+            let command_state = CommandState {
+                id,
+                duration: device.duration,
+                intensity: device.intensity,
+                last_issued: Instant::now(),
+                expiry: calculate_expiry(device.duration.into()).await,
+            };
+            command_states.lock().await.insert(id, command_state);
+        }
+    }
+    command_states
 }
 
 pub async fn display_and_handle_touchpoints(mut rx: Receiver<OscMessage>, delay_ms: u64) -> Result<(), Box<dyn std::error::Error>> {
@@ -72,6 +100,11 @@ pub async fn display_and_handle_touchpoints(mut rx: Receiver<OscMessage>, delay_
     }
 
     Ok(())
+}
+
+async fn calculate_expiry(duration: u64) -> Instant {
+    let duration =Duration::from_millis(duration);
+    Instant::now() + duration
 }
 
 //takes in a given touchpoint and routes it to the appropriate function for it's firmware

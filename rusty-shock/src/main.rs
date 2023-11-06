@@ -19,6 +19,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let logging_config = config::get_logging_config();
     Logger::with_config(logging_config).init().unwrap();
 
+    // Initialize the command map and pass it to the OSC handler task
+    let command_states = osc::touchpoints::initialize_commandmap().await;
+
     log::info!("Rusty Shock has started");
 
     // Create a channel for OSC messages
