@@ -1,10 +1,13 @@
+use osc::touchpoints::CommandState;
 use swing::Logger;
 use tokio::sync::mpsc;
 use tokio::sync::Notify;
 use std::sync::Arc;
 use rosc::OscMessage;
 use async_throttle::RateLimiter;
-use tokio::time::Duration;
+use tokio::time::{Duration,Instant};
+use std::collections::HashMap;
+use tokio::sync::Mutex;
 
 // MODULES BABBBBBYYYYYY
 mod config;
@@ -21,7 +24,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     // Initialize the command map and pass it to the OSC handler task
     let command_states = osc::touchpoints::initialize_commandmap().await;
-
+    let command_states_clone = Arc::clone(&command_states);
     log::info!("Rusty Shock has started");
 
     // Create a channel for OSC messages
@@ -32,20 +35,46 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         //osc::osc::start_osc_server(tx).await.expect("OSC server failed");
         osc::osc::start_osc_server(tx).await.expect("OSC server failed");
     });
-
-    // Spawn the API handler task
-    let touchpoints_handle = tokio::spawn(async {
             // Pass the desired delay in milliseconds here
-    let delay_ms = 50; // for a 100 ms delay
+            let delay_ms = 50; // for a 100 ms delay
+    // Spawn the API handler task
+    let touchpoints_handle = tokio::spawn(async move {
         // Pass the receiver `rx` into the function
-        osc::touchpoints::display_and_handle_touchpoints(rx,delay_ms).await.unwrap();
+        osc::touchpoints::display_and_handle_touchpoints(rx,delay_ms,command_states).await.unwrap();
     });
 
-    // Display the touchpoints
-    //osc::touchpoints::display_touchpoints().await?;
+    let websocket_handle = tokio::spawn(async {
+        identify_firmware_start_server(command_states_clone).await;
+    });
 
     // Wait for the server and API handler to complete. This will never return unless those tasks panic or are otherwise stopped
-    let _ = tokio::try_join!(server_handle, touchpoints_handle);
+    let _ = tokio::try_join!(server_handle, touchpoints_handle,websocket_handle);
 
     Ok(())
+}
+
+
+async fn identify_firmware_start_server(commandmap: Arc<Mutex<HashMap<String, CommandState>>>){
+    log::debug!("Firmware Router: Starting Web Server");
+
+    let config = config::get_config();
+
+    match config.firmware.firmware.to_ascii_lowercase().as_str(){
+        "legacy" => {
+            log::debug!("Legacy Touchpoint");
+            let commandmap_clone = Arc::clone(&commandmap);
+            openshock_legacy::handler::handler(config.firmware.api_endpoint.clone(),commandmap_clone).await;
+        },
+        "openshock" => {
+            log::debug!("OpenShock Touchpoint");
+            log::warn!("OpenShock is not yet implemented");
+            //openshock::websocket::start_websocket_server().await;
+        },
+        "pishock" => {
+            log::debug!("PiShock Touchpoint");
+            log::warn!("PiShock is not yet implemented");
+            //pishock::websocket::start_websocket_server().await;
+        }
+        _ => log::error!("Unknown touchpoint firmware: {}", config.firmware.firmware),
+    }
 }

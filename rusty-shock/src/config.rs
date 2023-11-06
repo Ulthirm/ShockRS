@@ -10,7 +10,7 @@ use log::LevelFilter;
 pub struct Config {
     pub osc: Osc,
     pub logging: Logging,
-    pub openshock_legacy: OpenShockLegacy,
+    pub firmware: Firmware,
 }
 
 // Expected OSC config, listen_port,send_port,ip_address
@@ -27,7 +27,8 @@ pub struct Logging {
 }
 
 #[derive(Deserialize)]
-pub struct OpenShockLegacy {
+pub struct Firmware {
+    pub firmware: String,
     pub api_endpoint: String,
 }
 
@@ -70,10 +71,16 @@ fn create_config() -> io::Result<()> {
     # Default: 127.0.0.1 (LocalHost)
     ip_address = "127.0.0.1"
     
-    [openshock_legacy]
-    # OpenShock Legacy's endpoint to issue commands to.
+    [firmware]
+    # The firmware your controller device is using
+    # Options: legacy, openshock, pishock
+    # Default: legacy (When OpenShock 1.0 is released, this will be changed)
+    firmware = "legacy"
+    # This is the endpoint used for your specific firmware
+    # This option will be refactored once we know how the endpoints for each host works.
+    # if unnecessary it'll be adjusted as an advanced option for user experience
     # Default: OpenShock.Local
-    api_endpoint = "OpenShock.Local"
+    api_endpoint = "openshock.local"
 
     [logging]
     # This is the log level that RustyShock will use.

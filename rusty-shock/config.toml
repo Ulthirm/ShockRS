@@ -15,8 +15,14 @@
     # Default: /avatar/parameters/
     touchpointPrefix = "/avatar/parameters/"
 
-    [openshock_legacy]
-    # OpenShock Legacy's endpoint to issue commands to.
+    [firmware]
+    # The firmware your controller device is using
+    # Options: legacy, openshock, pishock
+    # Default: legacy (When OpenShock 1.0 is released, this will be changed)
+    firmware = "legacy"
+    # This is the endpoint used for your specific firmware
+    # This option will be refactored once we know how the endpoints for each host works.
+    # if unnecessary it'll be adjusted as an advanced option for user experience
     # Default: OpenShock.Local
     api_endpoint = "openshock.local"
 

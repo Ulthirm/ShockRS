@@ -11,15 +11,15 @@
 [[touchpoints]]
 address = "tail"
 firmware = "legacy"
-method = 1
+method = [1,2]
 intensity = 1.0
 duration = 300
-ids = [3863]
+ids = [3863,1234]
 
 [[touchpoints]]
 address = "NoseBoop"
 firmware = "openshock"
-method = 1
+method = [1]
 intensity = 0.1
 duration = 300
 ids = [3863]
@@ -27,7 +27,7 @@ ids = [3863]
 [[touchpoints]]
 address = "HeadPat"
 firmware = "pishock"
-method = 1
+method = [1]
 intensity = 0.1
 duration = 300
 ids = [3863]
