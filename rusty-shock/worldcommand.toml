@@ -1,0 +1,10 @@
+[[worldcmd]]
+# The regex pattern to match within the log file
+pattern = "your_regex_pattern_here"
+# How to extract variables from the matched pattern
+variables = { key1 = "regex_group_1", key2 = "regex_group_2" }
+# Address of the touchpoint this will map to
+destination = "tail"
+# Intensity or weight of the command
+intensity = 1.0
+# Additional options can be added as needed

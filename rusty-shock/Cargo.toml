@@ -16,6 +16,7 @@ chrono = "0.4.31"
 colored = "2.0.4"
 futures-util = {version = "0.3.29"}
 log = "0.4.20"
+notify = { version = "6.1.1", default-features = false, features = ["macos_kqueue"] }
 once_cell = "1.18.0"
 rosc = "0.10.1"
 serde = { version = "1.0.190", features = ["derive"] }

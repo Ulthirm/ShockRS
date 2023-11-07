@@ -15,6 +15,16 @@ mod osc;
 mod openshock_legacy;
 mod openshock;
 mod pishock;
+mod world_command;
+
+// New type for WorldCommand that defines the data we want to extract from the log file
+#[derive(Debug)]
+pub struct WorldCommandEvent {
+    pub address: String,
+    pub method: Vec<u8>,
+    pub intensity: f32,
+    pub duration: u64,
+}
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -34,6 +44,12 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let server_handle = tokio::spawn(async move {
         //osc::osc::start_osc_server(tx).await.expect("OSC server failed");
         osc::osc::start_osc_server(tx).await.expect("OSC server failed");
+    });
+
+    // Create a channel for WorldCommand messages
+    let (world_command_tx, mut world_command_rx) = mpsc::channel::<WorldCommandEvent>(100); // buffer size as needed
+    let world_command_handle = tokio::spawn(async move {
+        world_command::handler::start_world_command_server(world_command_tx).await.unwrap();
     });
     
     // Pass the desired delay in milliseconds here
