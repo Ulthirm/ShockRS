@@ -49,8 +49,9 @@ pub async fn initialize_commandmap() -> Arc<Mutex<HashMap<String, CommandState>>
     let command_states: Arc<Mutex<HashMap<String, CommandState>>> = Arc::new(Mutex::new(HashMap::new()));
     for device in TOUCHPOINTS.touchpoints.iter() {
         for &id in &device.ids {
+            for &method in &device.method {
             // Convert the u32 id to a String based on the expected format in the rest of the code
-            let id_string = id.to_string(); // Ensure this is the format you want, possibly including method
+            let id_string = format!("{}_{}", id.to_string(), method.to_string());  // Ensure this is the format you want, possibly including method
             
             // Initialize with default values: 0 duration and intensity, expiry as now
             let command_state = CommandState {
@@ -62,6 +63,8 @@ pub async fn initialize_commandmap() -> Arc<Mutex<HashMap<String, CommandState>>
             };
             // Insert the command state with a String key
             command_states.lock().await.insert(id_string, command_state);
+            }
+
         }
     }
     command_states
@@ -107,10 +110,12 @@ async fn process_message(msg: &OscMessage,commandmap: Arc<Mutex<HashMap<String, 
     // Get all the potential shocker IDs
     let shocker_ids = extract_shocker_ids(msg.addr.clone()).await;
     log::debug!("Shocker IDs: {:?}", shocker_ids);
+
+    let shocker_intensity = extract_shocker_intensity(msg.addr.clone()).await;
     // Safely attempt to extract the float value from the first argument.
     // This is an unsafe assumption of how OSC will output from VRChat
     let intensity = match msg.args[0] {
-        OscType::Float(val) => val,
+        OscType::Float(val) => val * shocker_intensity,
         _ => {
             log::error!("First touchpoint argument is not a float; handler will not proceed.");
             return;
@@ -131,13 +136,31 @@ async fn process_message(msg: &OscMessage,commandmap: Arc<Mutex<HashMap<String, 
     }
 }
 
+async fn extract_shocker_intensity(message_addr: String) -> f32 {
+    let message_addr = match message_addr.split("/").last() {
+        Some(addr) => addr,
+        None => { 
+            log::error!("[extract intensity]: Failed to extract Address {}", message_addr);
+            return 0.0;
+        },
+    };
+    log::debug!("Extracting shocker IDs from message address: {}", message_addr);
+
+    if let Some(device) = TOUCHPOINTS.touchpoints.iter().find(|device| device.address == message_addr) {
+        device.intensity
+    } else {
+        log::error!("Unknown touchpoint: {}", message_addr);
+        0.0
+    }
+}
+
 async fn process_shocker_by_id(shocker_id: String,message: &OscMessage,command_map: Arc<Mutex<HashMap<String, CommandState>>>, duration: u64,intensity: f32,) {
     log::debug!("Processing shocker ID: {}", shocker_id);
     let mut command_states = command_map.lock().await;
     // If the command state for this ID exists, update it
     if let Some(command_state) = command_states.get_mut(&shocker_id) {
         command_state.last_issued = Instant::now();
-        command_state.expiry = calculate_expiry(command_state.duration.into()).await;
+        command_state.expiry = calculate_expiry(message.addr.clone()).await;
         command_state.intensity = intensity;
         command_state.duration = duration;
     } else {
@@ -147,7 +170,7 @@ async fn process_shocker_by_id(shocker_id: String,message: &OscMessage,command_m
             duration,
             intensity,
             last_issued: Instant::now(),
-            expiry: calculate_expiry(duration).await,
+            expiry: calculate_expiry(message.addr.clone()).await,
         };
         command_states.insert(shocker_id, new_command_state); // Now it's expecting a String key
     }
@@ -176,43 +199,22 @@ async fn extract_shocker_ids(message_addr: String) -> Vec<String> {
 
 
 
-async fn calculate_expiry(duration: u64) -> Instant {
-    let duration =Duration::from_millis(duration);
-    Instant::now() + duration
-}
-
-//takes in a given touchpoint and routes it to the appropriate function for it's firmware
-// Retained for historical reference, invalid now that we've moved firmware to the config
-/*
-pub async fn touchpoint_router(touchpoint: String, touchpoint_args: Vec<OscType>) {
-    log::debug!("Touchpoint Router: {}", touchpoint);
-
-    //split touchpoint at / to the last element
-    let touchpoint = touchpoint.split("/").last().unwrap().to_string();
-
-    if let Some(device) = TOUCHPOINTS.touchpoints.iter().find(|device| device.address == touchpoint) {
-        log::debug!("Touchpoint Firmware: {}", device.firmware);
-        match config.firmware.to_ascii_lowercase().as_str() {
-            "legacy" => {
-                log::debug!("Legacy Touchpoint");
-                openshock_legacy::handler::handler(device,touchpoint,touchpoint_args.clone()).await;
-            },
-            "openshock" => {
-                log::debug!("OpenShock Touchpoint");
-                openshock::handler::handler(touchpoint,touchpoint_args.clone()).await;
-            },
-            "pishock" => {
-                log::debug!("PiShock Touchpoint");
-                pishock::handler::handler(touchpoint,touchpoint_args.clone()).await;
-            }
-            _ => log::error!("Unknown touchpoint firmware: {}", device.firmware),
-        }
+async fn calculate_expiry(message_addr: String) -> Instant {
+    let message_addr = match message_addr.split("/").last() {
+        Some(addr) => addr,
+        None => { 
+            //log::error!("Failed to extract shocker IDs from message address: {}", message_addr);
+            return Instant::now();
+        },
+    };
+    log::debug!("Extracting shocker expiry from message address: {}", message_addr);
+    if let Some(device) = TOUCHPOINTS.touchpoints.iter().find(|device| device.address == message_addr) {
+        
+        let duration =Duration::from_millis(device.duration);
+        log::debug!("Duration: {:?}", duration);
+        Instant::now() + duration
     } else {
-        log::error!("Unknown touchpoint: {}", touchpoint);
-    }
-
-    for arg in touchpoint_args {
-        log::debug!("Touchpoint Argument: {:?}", arg);
+        log::error!("Unknown touchpoint: {}", message_addr);
+        Instant::now()
     }
 }
-*/

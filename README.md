@@ -12,10 +12,11 @@ Nothing yet
   * [x] serde library
   * [x] tokio library
   * [ ] OSC to API Router
-    * [ ] OpenShock-Legacy
+    * [x] OpenShock-Legacy
     * [ ] OpenShock
     * [ ] PiShock
 - [ ] OpenShock-Legacy ([Github](https://github.com/nullstalgia/OpenShock-ESP-Legacy)) API support<br>
+  * [x] OSC to API
   * [ ] HTTP Webserver 
 - [ ] OpenShock ([Github](https://github.com/OpenShock/Firmware) or [Website](openshock.org)) API support<br>
 - [ ] PiShock ([Website](pishock.com)) API support

@@ -9,6 +9,8 @@ use tokio::net::TcpStream;
 use async_throttle::RateLimiter;
 use tokio::time::{Instant,self,Duration};
 use std::collections::HashMap;
+use serde_json::json;
+use std::fmt::Write;
 
 // For reference
 /*pub struct CommandState {
@@ -26,6 +28,9 @@ pub async fn handler(websocket_url: String,commandmap: Arc<Mutex<HashMap<String,
     let websocket_url = format!("ws://{}:8080/ws",websocket_url);
 
     log::debug!("WebSocket URL: {}",websocket_url);
+
+    let touchpoint_config = &touchpoints::get_config().touchpoints;
+
     // Initialize the WebSocket client and store it in a Mutex 
     let ws_client = match WebSocketClient::get_or_init_websocket_client(&websocket_url).await {
         Ok(client) => client,
@@ -35,70 +40,60 @@ pub async fn handler(websocket_url: String,commandmap: Arc<Mutex<HashMap<String,
         },
     };
 
+        // WebSocket client mutex
+        let ws_client_mutex = Arc::new(Mutex::new(ws_client));
+
     // Command loop duration
-    let mut interval = time::interval(Duration::from_millis(50));
-
+    //let mut interval = time::interval(Duration::from_millis(50));
+    let interval = Duration::from_millis(150);
     loop {
-        interval.tick().await;
-        let commandmap = commandmap.lock().await;
-    }
-
-
-}
-
-
-
-
-// Saved for historical reference
-/*
-pub async fn handler(device: &Device,touchpoint: String,touchpoint_args: Vec<OscType>) {
-    if touchpoint_args.is_empty() {
-        // If there are no arguments, do not process further.
-        log::warn!("No touchpoint arguments provided; handler will not proceed.");
-        return;
-    }
-
-    // Safely attempt to extract the float value from the first argument.
-    let first_arg_f32 = match touchpoint_args[0] {
-        OscType::Float(val) => (device.intensity * val)*100.0,
-        _ => {
-            log::error!("First touchpoint argument is not a float; handler will not proceed.");
-            return;
-        }
-    };
-
-    // Ensure the value does not exceed 100 due to floating-point arithmetic quirks
-    let first_arg_f32 = first_arg_f32.min(100.0);
-
-    let legacy_config = &config::get_config().firmware;
-    let touchpoint_config = &touchpoints::get_config().touchpoints;
-
-    log::debug!("Legacy Touchpoint Handler");
-    for arg in touchpoint_args {
-        log::debug!("Touchpoint Argument: {:?}", arg);
-    }
-
-
-    // assume device.intensity is equivalent to 100% and scale it using the touchpoint intensity
-    //let intensity = device.intensity * first_arg_f32;
-
-    let ws_command = format!("{{\"method\":{},\"intensity\":{},\"duration\":{},\"ids\":[{}],\"timestamp\":{}}}",1,first_arg_f32,device.duration,device.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(", "),chrono::Utc::now().timestamp_millis());
+        let now = Instant::now();
     
-    log::debug!("Sending WS Command: {}",ws_command);
-    
-    let ws_url = format!("ws://{}:8080/ws",legacy_config.api_endpoint);
+        // First, clone the command map so we can iterate without holding the lock.
+        // This step assumes that the command map doesn't get too large to clone each iteration.
+        // If the command map is very large, this might not be the most efficient approach.
+        let cloned_commandmap = {
+            let commandmap_lock = commandmap.lock().await;
+            commandmap_lock.clone() // We clone here to avoid holding the lock while sending messages.
+        };
 
-    match WebSocketClient::get_or_init_websocket_client(ws_url.as_str()).await {
-        Ok(ws_client) => {
-                ws_client.send(ws_command).await.unwrap();
-            // Use ws_client
+        let mut batch_commands: HashMap<(u8, u8), Vec<u16>> = HashMap::new();
 
-        },
-        Err(e) => {
-            // Handle the error, possibly by logging or taking corrective action
-            log::error!("Failed to get or initialize the WebSocket client: {}", e);
+        // Iterate over cloned command map and send commands for non-expired IDs
+
+        for (key, command_state) in cloned_commandmap.iter() {
+            if command_state.expiry > now && command_state.intensity > 0.0 {
+                // Parse and prepare your keys
+                let (id_str, method_str) = key.split_once('_').expect("Invalid key format");
+                let id = id_str.parse::<u16>().expect("Invalid ID format");
+                let method = method_str.parse::<u8>().expect("Invalid method format");
+                let intensity = (command_state.intensity * 100.0).round() as u8;
+        
+                // Group commands by method and intensity
+                batch_commands
+                    .entry((method, intensity))
+                    .or_default()
+                    .push(id);
+            }
         }
+
+        for ((method, intensity), ids) in batch_commands {
+            let json_payload = json!({
+                "method": method,
+                "intensity": intensity,
+                "duration": 50, // fixed duration for all commands
+                "ids": ids,
+                "timestamp": Utc::now().timestamp_millis(),
+            }).to_string();
+        
+            log::debug!("Sending JSON payload: {}", json_payload);
+            // Acquire lock and send
+            let client_lock = ws_client_mutex.lock().await;
+            client_lock.send(json_payload).await.unwrap(); // Properly handle errors
+        }
+    
+        // Sleep until the next loop iteration to maintain the loop interval
+        time::sleep(interval).await;
     }
 
 }
-*/

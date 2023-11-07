@@ -35,8 +35,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         //osc::osc::start_osc_server(tx).await.expect("OSC server failed");
         osc::osc::start_osc_server(tx).await.expect("OSC server failed");
     });
-            // Pass the desired delay in milliseconds here
-            let delay_ms = 50; // for a 100 ms delay
+    
+    // Pass the desired delay in milliseconds here
+    let delay_ms = 50; // for a 100 ms delay
     // Spawn the API handler task
     let touchpoints_handle = tokio::spawn(async move {
         // Pass the receiver `rx` into the function
