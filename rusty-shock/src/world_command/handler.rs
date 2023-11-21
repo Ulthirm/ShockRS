@@ -1,7 +1,6 @@
-use notify::{RecursiveMode, Watcher, RecommendedWatcher};
+use notify::{RecursiveMode, Watcher};
 use std::sync::mpsc as std_mpsc; // Use the standard library's MPSC for notify
 use tokio::sync::mpsc;
-use std::time::Duration;
 use crate::WorldCommandEvent;
 use std::env;
 use std::path::PathBuf;
@@ -24,7 +23,7 @@ pub async fn start_world_command_server(mut tx: mpsc::Sender<WorldCommandEvent>)
     // Specify the path to watch
     //let path_to_watch = r"%appdata%\..\LocalLow\VRChat\VRChat\"; // This should be the directory where the files are located
     let appdata_var = env::var("APPDATA").map_err(|_| "Could not find APPDATA environment variable")?;
-    let vrchat_path_buf = PathBuf::from(appdata_var).join(r"..\LocalLow\VRChat\VRChat");
+    let vrchat_path_buf = PathBuf::from(appdata_var).join(r"..\LocalLow\VRChat\VRChat\");
     let vrchat_path = vrchat_path_buf.as_path(); // Convert PathBuf to &Path
     watcher.watch(vrchat_path, RecursiveMode::Recursive)?;
 

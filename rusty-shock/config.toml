@@ -19,16 +19,26 @@
     # The firmware your controller device is using
     # Options: legacy, openshock, pishock
     # Default: legacy (When OpenShock 1.0 is released, this will be changed)
-    firmware = "legacy"
+    firmware = "openshock"
     # This is the endpoint used for your specific firmware
     # This option will be refactored once we know how the endpoints for each host works.
     # if unnecessary it'll be adjusted as an advanced option for user experience
     # Default: OpenShock.Local
-    api_endpoint = "openshock.local"
+    api_endpoint = "api.shocklink.net"
+    # The Openshock/Shocklink and PiShock Auth Token.
+    # Default: ""
+    api_authtoken = "ziaMvnhog1l3v9W2pnLqjo7XthKwJK7dV4HVh73NJWieMfsidAKFlwkrm3GrO8y6"
 
     [logging]
     # This is the log level that RustyShock will use.
     # Default: Info
     # options: Off, Info, Debug, Error
     level = "Debug"
+
+    [features]
+    # This defines features to be disabled
+    # Note that disabling features may have unpredictable behaviors
+    # options: touchpoint_router,api_router,osc_router,world_command_router
+    # default: ["",""]
+    disabled_features = ["world_command_router","osc_router","api_router"]
     

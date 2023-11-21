@@ -1,0 +1,57 @@
+1. Auth Token Verification
+
+    GET /1/tokens: List API tokens for verifying the validity and status of your authentication tokens.
+
+2. Shocker Device Verification
+
+    GET /2/shockers/{id}: Retrieve information about a specific shocker device.
+        Parameters: ID (STRING)
+    GET /2/shockers/own: List all shocker devices owned by the authenticated user.
+    GET /2/devices: (Assuming this endpoint exists in V2 and serves a similar purpose as in V1) List all devices.
+    GET /2/devices/{ID}: (Assuming this endpoint exists in V2 and serves a similar purpose as in V1) Retrieve information about a specific device.
+        Parameters: ID (STRING)
+
+3. Shocker Control
+
+    POST /2/shockers/control: Send control commands to shocker devices.
+        No parameters
+        Request body: JSON for controlling shockers (ID, type, intensity, duration)
+            {
+                "shocks": [
+                {
+                    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "type": 0,
+                    "intensity": 100,
+                    "duration": 30000
+                }
+                ],
+                "customName": "string"
+            }
+    POST /2/shockers/{id}/pause: Pause a specific shocker device.
+        Parameters: ID (STRING)
+        Request body: JSON (pause: true)
+            {
+                 "pause": true
+            }
+
+4. API Auth token method
+
+    HTTP Header custom authorization token
+        OpenShockToken: API_TOKEN
+            encoded STRING which can be at least 64 digits long.
+
+5. Shocker IDs
+
+    Custom encoded STRING
+        Can be at least 36 digits long, however all examples use 4 dashes making a STRING 32 broken into STRING8-STRING4-STRING4-STRING4-STRING12
+        UUID Vers 4 / Microsoft GUID, No meaningful data is stored in these unlike other Versions of UUID. We can use a 128 bit String or straight string to store and implement this version of the IDs
+
+        - Legacy U16 (Stored as a String)
+        - OpenShock STRING
+        - PiShock ???
+
+OpenShock SignalR
+api_hub = api.shocklink.net/1/hubs/user
+same headers
+wait for welcome (with SessionID)
+SessionID is logging where the command came from

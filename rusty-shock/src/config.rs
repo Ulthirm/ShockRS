@@ -11,6 +11,7 @@ pub struct Config {
     pub osc: Osc,
     pub logging: Logging,
     pub firmware: Firmware,
+    pub features: Features,
 }
 
 // Expected OSC config, listen_port,send_port,ip_address
@@ -30,6 +31,12 @@ pub struct Logging {
 pub struct Firmware {
     pub firmware: String,
     pub api_endpoint: String,
+    pub api_authtoken: String,
+}
+
+#[derive(Deserialize)]
+pub struct Features {
+    pub disabled_features : Vec<String>,
 }
 
 // Make CONFIG a public static so it's accessible from other modules
@@ -81,11 +88,21 @@ fn create_config() -> io::Result<()> {
     # if unnecessary it'll be adjusted as an advanced option for user experience
     # Default: OpenShock.Local
     api_endpoint = "openshock.local"
+    # The Openshock/Shocklink and PiShock Auth Token.
+    # Default: ""
+    api_authtoken = ""
 
     [logging]
     # This is the log level that RustyShock will use.
     # Default: Info
     level = "Info"
+
+    [features]
+    # This defines features to be disabled
+    # Note that disabling features may have unpredictable behaviors
+    # options: touchpoint_router,api_router,osc_router,world_command_router
+    # default: ["",""]
+    disabled_features = ["",""]
     "#;
 
     //for some odd reason if I dont do the conversion to bytes it wont write to the file even with as_bytes in write_all
@@ -110,4 +127,10 @@ pub fn get_logging_config() -> LoggerConfig {
         level: level,
         ..Default::default()
     }
+}
+
+// generate the features config for each feature implementation across the files
+pub fn get_features_config() -> &'static Features {
+    &CONFIG.features
+    // eventually we might want to do some processing to verify the features are valid or not blank
 }

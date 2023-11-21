@@ -4,9 +4,11 @@ use std::fs;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 use std::collections::HashMap;
-use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration,self,Instant};
 use tokio::sync::Mutex;
+use tokio::sync::mpsc;
+use crate::WorldCommandEvent;
+use futures::future::FutureExt;
 
 use crate::{openshock_legacy,openshock,pishock};
 
@@ -21,7 +23,7 @@ pub struct Device {
     pub method: Vec<u8>,
     pub intensity: f32,
     pub duration: u64,
-    pub ids: Vec<u32>,
+    pub ids: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -48,10 +50,10 @@ pub fn get_config() -> &'static Touchpoints {
 pub async fn initialize_commandmap() -> Arc<Mutex<HashMap<String, CommandState>>> {
     let command_states: Arc<Mutex<HashMap<String, CommandState>>> = Arc::new(Mutex::new(HashMap::new()));
     for device in TOUCHPOINTS.touchpoints.iter() {
-        for &id in &device.ids {
+        for id in &device.ids {
             for &method in &device.method {
             // Convert the u32 id to a String based on the expected format in the rest of the code
-            let id_string = format!("{}_{}", id.to_string(), method.to_string());  // Ensure this is the format you want, possibly including method
+            let id_string = format!("{}_{}", id, method.to_string());  // Ensure this is the format you want, possibly including method
             
             // Initialize with default values: 0 duration and intensity, expiry as now
             let command_state = CommandState {
@@ -71,38 +73,44 @@ pub async fn initialize_commandmap() -> Arc<Mutex<HashMap<String, CommandState>>
 }
 
 
-pub async fn display_and_handle_touchpoints(mut rx: Receiver<OscMessage>,delay_ms: u64,commandmap: Arc<Mutex<HashMap<String, CommandState>>>,) -> Result<(), Box<dyn std::error::Error>> {
-    // Display the touchpoints as before
-    for device in TOUCHPOINTS.touchpoints.iter() {
-        log::debug!("\nTouchpoint: {}\n IDs: {}", device.address, device.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(", "));
-    }
+pub async fn display_and_handle_touchpoints(
+    mut osc_rx: Option<mpsc::Receiver<OscMessage>>,
+    mut world_command_rx: Option<mpsc::Receiver<WorldCommandEvent>>,
+    command_states: Arc<Mutex<HashMap<String, CommandState>>>,
+    delay_ms: u64
+) -> Result<(), Box<dyn std::error::Error>> {
 
-    // Interval duration
     let interval = Duration::from_millis(delay_ms);
     let mut interval_timer = time::interval(interval);
-        // Tick immediately to align the start of the interval with the start of processing.
-    interval_timer.tick().await; // Wait for the next interval tick
 
-    // Main loop
     loop {
         tokio::select! {
-            message = rx.recv() => {
-                if let Some(msg) = message {
-                    // Process the incoming message and update hashmap
-                    process_message(&msg, Arc::clone(&commandmap)).await;
-                } else {
-                    // If the channel is closed, exit the loop.
-                    break;
-                }
-            }
             _ = interval_timer.tick() => {
-                // This is where you would handle the tick delay, 
-                // potentially sending out commands based on the updated commandmap states.
-            }
+                // Regular interval tasks
+            },
+            Some(message) = async { osc_rx.as_mut().and_then(|rx| rx.recv().now_or_never().flatten()) }, if osc_rx.is_some() => {
+                handle_osc_messages(message, Arc::clone(&command_states)).await;
+            },
+            Some(event) = async { world_command_rx.as_mut().and_then(|rx| rx.recv().now_or_never().flatten()) }, if world_command_rx.is_some() => {
+                handle_world_command_messages(event, Arc::clone(&command_states)).await;
+            },
+            else => break,
         }
     }
 
     Ok(())
+}
+
+
+
+async fn handle_osc_messages(message: OscMessage, command_map: Arc<Mutex<HashMap<String, CommandState>>>) {
+    let mut command_states = command_map.lock().await;
+    // ...
+}
+
+async fn handle_world_command_messages(event: WorldCommandEvent, command_map: Arc<Mutex<HashMap<String, CommandState>>>) {
+    let mut command_states = command_map.lock().await;
+    // ...
 }
 
 // Helper function to process each message

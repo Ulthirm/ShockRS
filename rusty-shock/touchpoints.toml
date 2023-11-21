@@ -12,39 +12,39 @@ address = "tail"
 method = [1,2]
 intensity = 1.0
 duration = 300
-ids = [3863,1234]
+ids = ["3863","1234"]
 
 [[touchpoints]]
 address = "NoseBoop"
 method = [1]
 intensity = 0.1
 duration = 300
-ids = [3863]
+ids = ["3863"]
 
 [[touchpoints]]
 address = "HeadPat"
 method = [1]
 intensity = 0.1
 duration = 300
-ids = [3863]
+ids = ["3863"]
 
 [[touchpoints]]
 address = "tail1"
 method = [1,2]
 intensity = 1.0
 duration = 6000
-ids = [3863,1234]
+ids = ["3863","1234"]
 
 [[touchpoints]]
 address = "tail2"
 method = [1,2]
 intensity = 1.0
 duration = 6000
-ids = [4567,8907]
+ids = ["4567","8907"]
 
 [[touchpoints]]
 address = "tail3"
 method = [1,2]
 intensity = 1.0
 duration = 6000
-ids = [3863,8765]
+ids = ["3863","8765"]
