@@ -1,5 +1,5 @@
-# Rusty Shock
-Ulthirm's Rust based implementation of local OpenShock control
+# ShockRS
+Rust based implementation of local OpenShock control
 
 ***
 
